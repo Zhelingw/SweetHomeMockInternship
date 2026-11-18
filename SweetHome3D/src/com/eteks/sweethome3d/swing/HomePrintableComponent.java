@@ -363,11 +363,14 @@ public class HomePrintableComponent extends JComponent implements Printable {
       } else {
         furnitureFilter = null;
       }
-      // Try to print next furniture view page      
-      pageExists = ((Printable)furnitureView).print(g2D, pageFormat, page);
-      if (furnitureTable != null) {
-        // Restore previous filter
-        ((FurnitureTable)furnitureView).setFurnitureFilter(furnitureFilter);
+      // Try to print next furniture view page
+      try {
+        pageExists = ((Printable)furnitureView).print(g2D, pageFormat, page);
+      } finally {
+        // Restore the previous filter even if printing fails
+        if (furnitureTable != null) {
+          furnitureTable.setFurnitureFilter(furnitureFilter);
+        }
       }
       if (pageExists == PAGE_EXISTS
           && !this.printablePages.contains(page)) {

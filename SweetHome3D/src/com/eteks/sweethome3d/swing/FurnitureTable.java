@@ -821,20 +821,26 @@ public class FurnitureTable extends JTable implements View, Printable {
     if (EventQueue.isDispatchThread()) {
       TableColumnModel oldColumnModel = getColumnModel();
       Color oldGridColor = getGridColor();
-      setColumnModel(printableColumnModel);   
-      if (OperatingSystem.isWindows()) {
-        // Add 3 pixels to columns to get a correct rendering
-        updateTableColumnsWidth(3);
-      } else {
-        updateTableColumnsWidth(0);
+
+      try {
+        setColumnModel(printableColumnModel);
+
+        if (OperatingSystem.isWindows()) {
+          // Add 3 pixels to columns to get a correct rendering
+          updateTableColumnsWidth(3);
+        } else {
+          updateTableColumnsWidth(0);
+        }
+
+        setGridColor(gridColor);
+
+        Printable printable = getPrintable(PrintMode.FIT_WIDTH, null, null);
+        return printable.print(g, pageFormat, pageIndex);
+      } finally {
+        // Restore the on-screen table even if printing fails
+        setColumnModel(oldColumnModel);
+        setGridColor(oldGridColor);
       }
-      setGridColor(gridColor);
-      Printable printable = getPrintable(PrintMode.FIT_WIDTH, null, null);
-      int pageExists = printable.print(g, pageFormat, pageIndex);
-      // Restore column model and grid color to their previous values
-      setColumnModel(oldColumnModel);
-      setGridColor(oldGridColor);
-      return pageExists;
     } else {
       // Print synchronously table in Event Dispatch Thread
       // The best solution should be to be able to print out of Event Dispatch Thread
@@ -1254,7 +1260,7 @@ public class FurnitureTable extends JTable implements View, Printable {
         case HEIGHT : 
           return getSizeRenderer(HomePieceOfFurniture.SortableProperty.HEIGHT, preferences);
         case VOLUME:
-          return getVolumeRenderer();
+          return getVolumeRenderer(preferences);
         case X :
           return getSizeRenderer(HomePieceOfFurniture.SortableProperty.X, preferences);
         case Y :
@@ -1417,24 +1423,26 @@ public class FurnitureTable extends JTable implements View, Printable {
     }
 
     /**
-     * Returns a renderer that displays the volume of a piece of furniture.
+     * Returns a renderer that displays volume using the length number format.
      */
-    private TableCellRenderer getVolumeRenderer() {
+    private TableCellRenderer getVolumeRenderer(
+        final UserPreferences preferences) {
       return new DefaultTableCellRenderer() {
         @Override
         public Component getTableCellRendererComponent(
-                JTable table, Object value,
-                boolean isSelected, boolean hasFocus,
-                int row, int column) {
+            JTable table, Object value,
+            boolean isSelected, boolean hasFocus,
+            int row, int column) {
 
-          Object volume = value != null
-                  ? ((HomePieceOfFurniture) value).getVolume()
-                  : null;
+          String volume = value != null
+              ? preferences.getLengthUnit().getFormat().format(
+              ((HomePieceOfFurniture)value).getVolume())
+              : "";
 
           setHorizontalAlignment(JLabel.RIGHT);
 
           return super.getTableCellRendererComponent(
-                  table, volume, isSelected, hasFocus, row, column);
+              table, volume, isSelected, hasFocus, row, column);
         }
       };
     }
